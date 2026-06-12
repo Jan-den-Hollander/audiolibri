@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Audioboek Recorder / Registratore / Audiobook Recorder</title>
+<!--
+  ============================================================
+  Audioboek Recorder / Registratore Audiolibri / Audiobook Recorder
+  © 2026 Jan den Hollander — jandenhollander@duck.com
+  Alle rechten voorbehouden / Tutti i diritti riservati / All rights reserved.
+
+  Dit bestand is beschermd door het auteursrecht.
+  Gebruik uitsluitend voor persoonlijk, niet-commercieel gebruik
+  met inachtneming van de Nederlandse thuiskopie-exceptie (Auteurswet art. 16b/c).
+
+  Questo file è protetto dal diritto d'autore.
+  Uso esclusivamente personale e non commerciale nel rispetto
+  dell'eccezione olandese per copia privata (art. 16b/c).
+
+  This file is protected by copyright law.
+  Personal, non-commercial use only, in accordance with the
+  Dutch private copy exception (Dutch Copyright Act art. 16b/c).
+
+  Verwijdering of wijziging van deze melding is niet toegestaan.
+  La rimozione o modifica di questo avviso non è consentita.
+  Removal or modification of this notice is not permitted.
+  ============================================================
+-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Source+Sans+3:wght@300;400;600&display=swap');
+
+  :root {
+    --ink: #1a1410; --parchment: #f5efe6; --aged: #e8ddd0;
+    --rust: #8b3a2a; --gold: #c9a84c; --muted: #7a6e65;
+    --green: #3a7a4a; --shadow: rgba(26,20,16,0.15);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background-color: var(--parchment);
+    background-image:
+      radial-gradient(ellipse at 20% 10%, rgba(201,168,76,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 90%, rgba(139,58,42,0.06) 0%, transparent 50%);
+    font-family: 'Source Sans 3', sans-serif;
+    color: var(--ink); min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 18px 14px 36px;
+  }
+
+  /* Overlays */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(26,20,16,0.72);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 999; padding: 20px;
+  }
+  .modal {
+    background: var(--parchment); border: 2px solid var(--gold);
+    border-radius: 6px; padding: 24px 20px 20px; max-width: 400px;
+    width: 100%; box-shadow: 0 8px 32px rgba(26,20,16,0.35);
+  }
+  .modal h2 {
+    font-family: 'Playfair Display', serif; font-size: 1.1rem;
+    color: var(--rust); margin-bottom: 14px; text-align: center;
+  }
+  .modal p { font-size: 0.82rem; line-height: 1.65; margin-bottom: 10px; color: var(--ink); }
+  .modal p:last-of-type { margin-bottom: 0; }
+  .modal .exception { color: var(--green); font-weight: 600; }
+  .modal hr { border: none; border-top: 1px solid var(--aged); margin: 12px 0; }
+  .modal .contact-line { font-size: 0.72rem; color: var(--muted); text-align: center; margin-bottom: 14px; }
+  .modal .btn-full {
+    width: 100%; padding: 13px; background: var(--rust); color: white;
+    border: none; border-radius: 3px; font-family: 'Source Sans 3', sans-serif;
+    font-size: 0.88rem; font-weight: 600; cursor: pointer;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .modal .btn-full:active { transform: scale(0.98); }
+
+  /* Lang picker */
+  .lang-picker { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+  .lang-pick-btn {
+    display: flex; align-items: center; gap: 14px; padding: 13px 16px;
+    border: 1.5px solid var(--aged); border-radius: 4px; background: white;
+    cursor: pointer; font-family: 'Source Sans 3', sans-serif;
+    transition: all 0.15s; -webkit-tap-highlight-color: transparent;
+  }
+  .lang-pick-btn:hover, .lang-pick-btn:active { border-color: var(--gold); background: var(--parchment); }
+  .lang-pick-btn .flag { font-size: 1.5rem; line-height: 1; }
+  .lang-pick-btn .lang-name { font-size: 0.95rem; font-weight: 600; color: var(--ink); flex: 1; }
+  .lang-pick-btn .lang-sub { font-size: 0.75rem; color: var(--muted); }
+
+  /* Header */
+  header {
+    text-align: center; margin-bottom: 18px; padding-bottom: 14px;
+    border-bottom: 1px solid var(--gold); width: 100%; max-width: 440px;
+  }
+  header h1 { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--ink); letter-spacing: 0.02em; }
+  header p { margin-top: 4px; font-size: 0.78rem; color: var(--muted); font-weight: 300; letter-spacing: 0.04em; }
+  .lang-toggle { display: flex; justify-content: center; gap: 6px; margin-top: 10px; }
+  .lang-btn {
+    font-family: 'Source Sans 3', sans-serif; font-size: 0.75rem; font-weight: 600;
+    letter-spacing: 0.08em; padding: 4px 12px; border: 1px solid var(--aged);
+    border-radius: 20px; background: transparent; color: var(--muted);
+    cursor: pointer; transition: all 0.15s; -webkit-tap-highlight-color: transparent;
+  }
+  .lang-btn.active { background: var(--gold); color: var(--ink); border-color: var(--gold); }
+
+  /* Cards */
+  .card {
+    background: white; border: 1px solid var(--aged); border-radius: 4px;
+    padding: 14px 16px; width: 100%; max-width: 440px;
+    margin-bottom: 12px; box-shadow: 0 2px 10px var(--shadow);
+  }
+  .card-title {
+    font-family: 'Playfair Display', serif; font-size: 0.78rem;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 10px;
+  }
+
+  /* Modus toggle */
+  .mode-row { display: flex; gap: 8px; margin-bottom: 4px; }
+  .mode-btn {
+    flex: 1; padding: 9px 6px; border: 1.5px solid var(--aged); border-radius: 3px;
+    background: white; font-family: 'Source Sans 3', sans-serif;
+    font-size: 0.78rem; font-weight: 600; color: var(--muted);
+    cursor: pointer; text-align: center; transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent; letter-spacing: 0.04em;
+  }
+  .mode-btn.active { background: var(--ink); color: var(--parchment); border-color: var(--ink); }
+  .mode-desc { font-size: 0.75rem; color: var(--muted); font-style: italic; margin-top: 6px; line-height: 1.4; }
+
+  /* Codewoord */
+  .keyword-row {
+    display: flex; align-items: center; gap: 8px; margin-top: 10px;
+    padding-top: 10px; border-top: 1px solid var(--aged);
+  }
+  .keyword-row label { font-size: 0.82rem; color: var(--ink); flex: 1; }
+  .keyword-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--parchment); border: 1px solid var(--aged);
+    border-radius: 20px; padding: 4px 12px; font-size: 0.78rem;
+    font-weight: 600; color: var(--ink);
+  }
+  .keyword-tag .kw-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--muted);
+  }
+  .keyword-tag.listening .kw-dot {
+    background: var(--green); animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  /* Segment */
+  .segment-row { display: flex; align-items: center; gap: 10px; }
+  .segment-row label { font-size: 0.88rem; color: var(--ink); flex: 1; }
+  .segment-row select {
+    font-family: 'Source Sans 3', sans-serif; font-size: 0.92rem;
+    padding: 6px 10px; border: 1px solid var(--aged); border-radius: 3px;
+    background: var(--parchment); color: var(--ink); cursor: pointer;
+    appearance: none; -webkit-appearance: none; min-width: 100px; text-align: center;
+  }
+
+  /* VU */
+  .vu-wrap { margin-bottom: 10px; }
+  .vu-label { font-size: 0.75rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 5px; display: flex; justify-content: space-between; }
+  .vu-bar-bg { height: 18px; background: var(--aged); border-radius: 3px; overflow: hidden; }
+  .vu-bar {
+    height: 100%; width: 0%; border-radius: 3px; transition: width 0.05s linear;
+    background: linear-gradient(90deg, #3a7a4a 0%, #3a7a4a 60%, #c9a84c 60%, #c9a84c 80%, #8b3a2a 80%, #8b3a2a 100%);
+  }
+  .vu-ticks { display: flex; justify-content: space-between; padding: 2px 0 0; }
+  .vu-ticks span { font-size: 0.6rem; color: var(--muted); }
+  .vu-signal { font-size: 0.75rem; margin-top: 4px; text-align: center; font-style: italic; min-height: 14px; color: var(--muted); }
+  .vu-signal.good { color: var(--green); }
+  .vu-signal.loud { color: var(--rust); }
+
+  /* Timer */
+  .status-block { display: flex; align-items: center; justify-content: space-between; padding: 4px 0 8px; }
+  .rec-indicator { width: 12px; height: 12px; border-radius: 50%; background: var(--aged); flex-shrink: 0; transition: background 0.3s; }
+  .rec-indicator.active { background: var(--rust); animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.45; transform: scale(1.35); } }
+  .timer-display { font-family: 'Playfair Display', serif; font-size: 2.4rem; color: var(--ink); letter-spacing: 0.04em; line-height: 1; }
+  .timer-display.recording { color: var(--rust); }
+  .segment-info { font-size: 0.78rem; color: var(--muted); text-align: right; line-height: 1.3; }
+  .progress-wrap { height: 3px; background: var(--aged); border-radius: 2px; overflow: hidden; margin-bottom: 12px; }
+  .progress-bar { height: 100%; background: linear-gradient(90deg, var(--gold), var(--rust)); width: 0%; transition: width 1s linear; }
+
+  /* Knoppen */
+  .btn-row { display: flex; gap: 8px; }
+  .btn {
+    flex: 1; padding: 11px 6px; border: none; border-radius: 3px;
+    font-family: 'Source Sans 3', sans-serif; font-size: 0.82rem; font-weight: 600;
+    letter-spacing: 0.07em; cursor: pointer; transition: all 0.15s ease;
+    text-transform: uppercase; -webkit-tap-highlight-color: transparent;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+  .btn-record { background: var(--rust); color: white; }
+  .btn-record:hover:not(:disabled) { background: #a0452f; }
+  .btn-stop { background: var(--ink); color: var(--parchment); }
+  .btn-stop:hover:not(:disabled) { background: #2e2620; }
+  .btn-pause { background: var(--aged); color: var(--ink); }
+  .btn-pause:hover:not(:disabled) { background: #d5c8b8; }
+
+  #status-msg { font-size: 0.8rem; color: var(--muted); text-align: center; margin-top: 8px; min-height: 16px; font-style: italic; }
+
+  /* Codewoord melding */
+  #keyword-flash {
+    display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    background: rgba(26,20,16,0.85); color: var(--gold);
+    font-family: 'Playfair Display', serif; font-size: 1.1rem;
+    padding: 14px 28px; border-radius: 6px; border: 1px solid var(--gold);
+    z-index: 500; text-align: center; pointer-events: none;
+  }
+
+  #downloads-card { display: none; }
+  .download-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--aged); font-size: 0.88rem; }
+  .download-item:last-child { border-bottom: none; }
+  .download-item span { color: var(--muted); font-size: 0.78rem; }
+  .btn-download {
+    background: var(--gold); color: var(--ink); border: none; border-radius: 3px;
+    padding: 7px 14px; font-family: 'Source Sans 3', sans-serif; font-size: 0.82rem;
+    font-weight: 600; cursor: pointer; letter-spacing: 0.05em; text-transform: uppercase;
+    -webkit-tap-highlight-color: transparent; white-space: nowrap;
+  }
+  .btn-download:active { transform: scale(0.97); }
+
+  /* Copyright card */
+  .copyright-card {
+    background: white; border: 1px solid var(--aged); border-left: 3px solid var(--gold);
+    border-radius: 4px; padding: 12px 14px; width: 100%; max-width: 440px;
+    margin-bottom: 12px; box-shadow: 0 2px 10px var(--shadow);
+    font-size: 0.78rem; line-height: 1.55; color: var(--ink);
+  }
+  .copyright-card .cp-title { font-family: 'Playfair Display', serif; font-size: 0.82rem; color: var(--rust); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+  .copyright-card p { margin-bottom: 5px; }
+  .copyright-card p:last-child { margin-bottom: 0; }
+  .copyright-card .exception { color: var(--green); font-weight: 600; }
+  .copyright-card .contact { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--aged); font-size: 0.73rem; color: var(--muted); }
+  .notice { font-size: 0.75rem; color: var(--muted); text-align: center; max-width: 440px; line-height: 1.5; padding: 0 8px; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<!-- Codewoord flash -->
+<div id="keyword-flash"></div>
+
+<!-- STAP 1: Taalkeuze -->
+<div class="overlay" id="lang-screen">
+  <div class="modal">
+    <h2>🌐 Kies een taal · Scegli la lingua · Choose language</h2>
+    <div class="lang-picker">
+      <button class="lang-pick-btn" onclick="pickLang('nl')">
+        <span class="flag">🇳🇱</span>
+        <span class="lang-name">Nederlands</span>
+        <span class="lang-sub">NL</span>
+      </button>
+      <button class="lang-pick-btn" onclick="pickLang('it')">
+        <span class="flag">🇮🇹</span>
+        <span class="lang-name">Italiano</span>
+        <span class="lang-sub">IT</span>
+      </button>
+      <button class="lang-pick-btn" onclick="pickLang('en')">
+        <span class="flag">🇬🇧</span>
+        <span class="lang-name">English</span>
+        <span class="lang-sub">EN</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- STAP 2: Auteursrecht -->
+<div class="overlay" id="cp-warning" style="display:none">
+  <div class="modal">
+    <h2 id="cp-title"></h2>
+    <p id="cp-text1"></p>
+    <p id="cp-text2"></p>
+    <hr>
+    <p id="cp-text3"></p>
+    <p class="contact-line">© 2026 Jan den Hollander · jandenhollander@duck.com</p>
+    <button class="btn-full" id="cp-btn" onclick="acceptWarning()"></button>
+  </div>
+</div>
+
+<!-- APP -->
+<header>
+  <h1 id="h-title">Audioboek Recorder</h1>
+  <p id="h-sub">Microfooningang · MP3 · Automatisch segmenteren</p>
+  <div class="lang-toggle">
+    <button class="lang-btn" onclick="switchLang('nl')">NL</button>
+    <button class="lang-btn" onclick="switchLang('it')">IT</button>
+    <button class="lang-btn" onclick="switchLang('en')">EN</button>
+  </div>
+</header>
+
+<!-- Opname modus -->
+<div class="card">
+  <div class="card-title" id="lbl-mode-title">Opnamemodus</div>
+  <div class="mode-row">
+    <button class="mode-btn active" id="mode-btn-cable" onclick="setMode('cable')">
+      🔌 <span id="lbl-mode-cable">Kabel</span>
+    </button>
+    <button class="mode-btn" id="mode-btn-ambient" onclick="setMode('ambient')">
+      🎙 <span id="lbl-mode-ambient">Omgeving</span>
+    </button>
+  </div>
+  <div class="mode-desc" id="mode-desc">Verbind de twee telefoons met een audiokabel. Beste kwaliteit.</div>
+
+  <!-- Codewoord (alleen zichtbaar in omgeving-modus) -->
+  <div class="keyword-row" id="keyword-row" style="display:none">
+    <label id="lbl-keyword"></label>
+    <div class="keyword-tag" id="keyword-tag">
+      <span class="kw-dot"></span>
+      <span id="keyword-words"></span>
+    </div>
+  </div>
+</div>
+
+<!-- VU Meter -->
+<div class="card">
+  <div class="card-title" id="lbl-meter">Signaalmeter</div>
+  <div class="vu-wrap">
+    <div class="vu-label">
+      <span id="lbl-level">Ingang niveau</span>
+      <span id="vuDb">— dB</span>
+    </div>
+    <div class="vu-bar-bg"><div class="vu-bar" id="vuBar"></div></div>
+    <div class="vu-ticks">
+      <span id="lbl-quiet">stil</span>
+      <span>–24</span><span>–18</span><span>–12</span><span>–6</span><span>0 dB</span>
+    </div>
+    <div class="vu-signal" id="vuSignal">—</div>
+  </div>
+  <button class="btn btn-pause" style="width:100%;font-size:0.8rem;padding:9px"
+    id="btnTest" onclick="toggleMeter()">▶ <span id="lbl-test">Test signaal</span></button>
+</div>
+
+<!-- Segment -->
+<div class="card">
+  <div class="card-title" id="lbl-seg-title">Segment lengte</div>
+  <div class="segment-row">
+    <label id="lbl-autosave">Automatisch opslaan na:</label>
+    <select id="segmentLength">
+      <option value="30">30 min</option>
+      <option value="45">45 min</option>
+      <option value="60" selected>60 min</option>
+      <option value="90">90 min</option>
+      <option value="120">120 min</option>
+      <option value="0" id="opt-nolimit">Geen limiet</option>
+    </select>
+  </div>
+</div>
+
+<!-- Opname -->
+<div class="card">
+  <div class="card-title" id="lbl-rec-title">Opname</div>
+  <div class="status-block">
+    <div class="rec-indicator" id="recDot"></div>
+    <div class="timer-display" id="timerDisplay">00:00:00</div>
+    <div class="segment-info" id="segmentInfo">Segment 1<br><span id="lbl-ready">Gereed</span></div>
+  </div>
+  <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+  <div class="btn-row">
+    <button class="btn btn-record" id="btnRecord" onclick="startRecording()">● <span id="lbl-rec">Opnemen</span></button>
+    <button class="btn btn-pause" id="btnPause" onclick="togglePause()" disabled>⏸ <span id="lbl-pause">Pauze</span></button>
+    <button class="btn btn-stop" id="btnStop" onclick="stopRecording()" disabled>■ <span id="lbl-stop">Stop</span></button>
+  </div>
+  <div id="status-msg">Druk op Opnemen om te beginnen</div>
+</div>
+
+<!-- Downloads -->
+<div class="card" id="downloads-card">
+  <div class="card-title" id="lbl-downloads">Opgeslagen segmenten</div>
+  <div id="downloads-list"></div>
+</div>
+
+<!-- Copyright card -->
+<div class="copyright-card">
+  <div class="cp-title" id="cp-card-title">© Auteursrecht &amp; gebruik</div>
+  <p id="cp-card-1"></p>
+  <p><span class="exception" id="cp-ex-lbl"></span> <span id="cp-card-ex"></span></p>
+  <p id="cp-card-3"></p>
+  <div class="contact">© 2026 Jan den Hollander ·
+    <a href="mailto:jandenhollander@duck.com" style="color:var(--muted)">jandenhollander@duck.com</a>
+  </div>
+</div>
+
+<p class="notice" id="notice-text"></p>
+
+<script>
+// ── Copyright tamper check ────────────────────────────────────
+const EXPECTED = 'jandenhollander@duck.com';
+window.addEventListener('load', () => {
+  if (!document.documentElement.innerHTML.includes(EXPECTED)) {
+    document.body.innerHTML = `
+      <div style="font-family:sans-serif;padding:40px;text-align:center;background:#f5efe6;min-height:100vh;display:flex;align-items:center;justify-content:center">
+        <div style="max-width:360px">
+          <h2 style="color:#8b3a2a;margin-bottom:16px">⚠ Ongeldige versie / Versione non valida / Invalid version</h2>
+          <p style="color:#1a1410;line-height:1.7;margin-bottom:12px">
+            De auteursrechtmelding is verwijderd of gewijzigd.<br>
+            L'avviso di copyright è stato rimosso o modificato.<br>
+            The copyright notice has been removed or altered.
+          </p>
+          <p style="font-size:0.8rem;color:#7a6e65">© 2026 Jan den Hollander — jandenhollander@duck.com</p>
+        </div>
+      </div>`;
+  }
+});
+
+// ── Vertalingen ───────────────────────────────────────────────
+const t = {
+  nl: {
+    title: 'Audioboek Recorder', sub: 'Microfooningang · MP3 · Automatisch segmenteren',
+    modeTitle: 'Opnamemodus', modeCable: 'Kabel', modeAmbient: 'Omgeving',
+    modeDescCable: 'Verbind de twee telefoons met een audiokabel. Beste kwaliteit.',
+    modeDescAmbient: 'Legt het omgevingsgeluid op via de ingebouwde microfoon. Leg de telefoon naast de speaker. Gebruik \'s nachts in een stille ruimte.',
+    keywordLabel: 'Codewoord nieuw segment:',
+    keywordWords: 'hoofdstuk · capitolo',
+    meterTitle: 'Signaalmeter', level: 'Ingang niveau', quiet: 'stil',
+    testStart: 'Test signaal', testStop: 'Stop meter',
+    segTitle: 'Segment lengte', autoSave: 'Automatisch opslaan na:', noLimit: 'Geen limiet',
+    recTitle: 'Opname', ready: 'Gereed', rec: 'Opnemen', pause: 'Pauze',
+    resume: 'Hervat', stop: 'Stop', downloads: 'Opgeslagen segmenten',
+    statusReady: 'Druk op Opnemen om te beginnen',
+    statusRec: 'Opname loopt…', statusRecAmbient: 'Omgevingsopname loopt… 🎙',
+    statusPaused: 'Gepauzeerd', statusEncoding: 'Coderen naar MP3…', statusDone: 'Klaar.',
+    segBusy: 'Bezig…', segDone: 'Klaar', segLabel: 'Segment', parts: 'segment(en)',
+    download: '↓ Download',
+    noticeAmbient: 'Leg de telefoon op ± 30–50 cm van de speaker. Stille ruimte = betere kwaliteit. Zeg "hoofdstuk" of "capitolo" om automatisch een nieuw segment te starten.',
+    noticeCable: 'Verbind de audio-uitgang van de afspeel-telefoon via een kabel met de microfooningang van dit toestel. Test eerst het signaal — groen = goed, oranje = hoog, rood = te luid.',
+    vuNone: '— microfoon nog niet actief —', vuStopped: '— meter gestopt —',
+    vuDenied: 'Microfoon geweigerd: ', vuNoSignal: 'Geen signaal — kabel aangesloten?',
+    vuWeak: 'Signaal te zwak — verhoog volume', vuGood: '✓ Goed signaal — klaar om op te nemen',
+    vuHigh: '⚠ Signaal hoog — volume iets verlagen', vuLoud: '✗ Te luid — volume verlagen!',
+    keywordDetected: 'Nieuw segment gestart',
+    cpCardTitle: '© Auteursrecht & gebruik',
+    cpCard1: 'Deze tool is uitsluitend bedoeld voor persoonlijk gebruik. Het opnemen van auteursrechtelijk beschermd materiaal is in beginsel verboden.',
+    cpExLbl: 'Nederlandse uitzondering:',
+    cpCardEx: 'De thuiskopie-exceptie (Auteurswet art. 16b/c) staat één privékopie toe van legaal verkregen materiaal, voor eigen gebruik — niet voor verspreiding.',
+    cpCard3: 'Gebruik buiten Nederland valt onder de lokale wetgeving. De maker aanvaardt geen aansprakelijkheid.',
+    cpWarnTitle: '⚠ Auteursrecht',
+    cpW1: 'Deze tool neemt audio op via de microfooningang. Het kopiëren van auteursrechtelijk beschermd materiaal zoals audioboeken is in de meeste landen <strong>verboden</strong>.',
+    cpW2: '<span class="exception">Nederlandse uitzondering:</span> In Nederland staat de <em>thuiskopie-exceptie</em> (Auteurswet art. 16b/c) toe dat u één kopie maakt van legaal verkregen materiaal, uitsluitend voor eigen gebruik. Deze kopie mag <strong>niet</strong> worden verspreid of commercieel worden gebruikt.',
+    cpW3: 'Deze tool is ontworpen voor persoonlijk gebruik door de maker. Gebruik buiten Nederland valt onder de wetgeving van uw eigen land.',
+    cpBtn: 'Ik begrijp dit en ga akkoord',
+    micDenied: 'Microfoon geweigerd: ', encSeg: 'coderen…', segReady: ' klaar · ', mb: ' MB',
+  },
+  it: {
+    title: 'Registratore Audiolibri', sub: 'Ingresso microfono · MP3 · Segmentazione automatica',
+    modeTitle: 'Modalità di registrazione', modeCable: 'Cavo', modeAmbient: 'Ambiente',
+    modeDescCable: 'Collega i due telefoni con un cavo audio. Qualità migliore.',
+    modeDescAmbient: 'Registra il suono ambientale tramite il microfono integrato. Posiziona il telefono vicino all\'altoparlante. Ideale di notte in un ambiente silenzioso.',
+    keywordLabel: 'Parola chiave nuovo segmento:',
+    keywordWords: 'capitolo · hoofdstuk',
+    meterTitle: 'Misuratore segnale', level: 'Livello ingresso', quiet: 'silenzio',
+    testStart: 'Testa segnale', testStop: 'Stop misuratore',
+    segTitle: 'Durata segmento', autoSave: 'Salvataggio automatico dopo:', noLimit: 'Nessun limite',
+    recTitle: 'Registrazione', ready: 'Pronto', rec: 'Registra', pause: 'Pausa',
+    resume: 'Riprendi', stop: 'Stop', downloads: 'Segmenti salvati',
+    statusReady: 'Premi Registra per iniziare',
+    statusRec: 'Registrazione in corso…', statusRecAmbient: 'Registrazione ambiente in corso… 🎙',
+    statusPaused: 'In pausa', statusEncoding: 'Codifica in MP3…', statusDone: 'Fatto.',
+    segBusy: 'In corso…', segDone: 'Fatto', segLabel: 'Segmento', parts: 'segmento/i',
+    download: '↓ Scarica',
+    noticeAmbient: 'Posiziona il telefono a ± 30–50 cm dall\'altoparlante. Ambiente silenzioso = qualità migliore. Di\' "capitolo" o "hoofdstuk" per avviare automaticamente un nuovo segmento.',
+    noticeCable: 'Collega l\'uscita audio del telefono di riproduzione all\'ingresso microfono tramite un cavo. Testa prima il segnale — verde = buono, arancione = alto, rosso = troppo forte.',
+    vuNone: '— microfono non ancora attivo —', vuStopped: '— misuratore fermato —',
+    vuDenied: 'Microfono negato: ', vuNoSignal: 'Nessun segnale — cavo collegato?',
+    vuWeak: 'Segnale troppo debole — aumenta il volume', vuGood: '✓ Segnale buono — pronto per registrare',
+    vuHigh: '⚠ Segnale alto — abbassa leggermente il volume', vuLoud: '✗ Troppo forte — abbassa il volume!',
+    keywordDetected: 'Nuovo segmento avviato',
+    cpCardTitle: '© Diritto d\'autore e utilizzo',
+    cpCard1: 'Questo strumento è destinato esclusivamente all\'uso personale. La registrazione di materiale protetto è in linea di principio vietata.',
+    cpExLbl: 'Eccezione olandese:',
+    cpCardEx: 'L\'eccezione per copia privata (art. 16b/c) consente una copia privata di materiale ottenuto legalmente, solo per uso personale — non per la distribuzione.',
+    cpCard3: 'L\'uso al di fuori dei Paesi Bassi è soggetto alla legislazione locale. Il creatore non si assume alcuna responsabilità.',
+    cpWarnTitle: '⚠ Diritto d\'autore',
+    cpW1: 'Questo strumento registra audio tramite il microfono. La copia di materiale protetto come gli audiolibri è <strong>vietata</strong> nella maggior parte dei paesi.',
+    cpW2: '<span class="exception">Eccezione olandese:</span> Nei Paesi Bassi, l\'<em>eccezione per copia privata</em> (art. 16b/c) consente una copia di materiale ottenuto legalmente, esclusivamente per uso personale. Questa copia <strong>non</strong> può essere distribuita o utilizzata commercialmente.',
+    cpW3: 'Questo strumento è progettato per uso personale dal suo creatore. L\'uso al di fuori dei Paesi Bassi è soggetto alla legislazione del proprio paese.',
+    cpBtn: 'Ho capito e accetto',
+    micDenied: 'Microfono negato: ', encSeg: 'codifica…', segReady: ' pronto · ', mb: ' MB',
+  },
+  en: {
+    title: 'Audiobook Recorder', sub: 'Microphone input · MP3 · Auto-segmentation',
+    modeTitle: 'Recording mode', modeCable: 'Cable', modeAmbient: 'Ambient',
+    modeDescCable: 'Connect the two phones with an audio cable. Best quality.',
+    modeDescAmbient: 'Records ambient sound via the built-in microphone. Place the phone next to the speaker. Best used at night in a quiet room.',
+    keywordLabel: 'Keyword for new segment:',
+    keywordWords: 'chapter · capitolo',
+    meterTitle: 'Signal Meter', level: 'Input level', quiet: 'silent',
+    testStart: 'Test signal', testStop: 'Stop meter',
+    segTitle: 'Segment length', autoSave: 'Auto-save after:', noLimit: 'No limit',
+    recTitle: 'Recording', ready: 'Ready', rec: 'Record', pause: 'Pause',
+    resume: 'Resume', stop: 'Stop', downloads: 'Saved segments',
+    statusReady: 'Press Record to start',
+    statusRec: 'Recording…', statusRecAmbient: 'Ambient recording… 🎙',
+    statusPaused: 'Paused', statusEncoding: 'Encoding to MP3…', statusDone: 'Done.',
+    segBusy: 'In progress…', segDone: 'Done', segLabel: 'Segment', parts: 'segment(s)',
+    download: '↓ Download',
+    noticeAmbient: 'Place the phone ± 30–50 cm from the speaker. Quiet room = better quality. Say "chapter" or "capitolo" to automatically start a new segment.',
+    noticeCable: 'Connect the audio output of the playback phone via cable to the microphone input of this device. Test the signal — green = good, orange = high, red = too loud.',
+    vuNone: '— microphone not yet active —', vuStopped: '— meter stopped —',
+    vuDenied: 'Microphone denied: ', vuNoSignal: 'No signal — cable connected?',
+    vuWeak: 'Signal too weak — increase volume', vuGood: '✓ Good signal — ready to record',
+    vuHigh: '⚠ Signal high — reduce volume slightly', vuLoud: '✗ Too loud — reduce volume!',
+    keywordDetected: 'New segment started',
+    cpCardTitle: '© Copyright & use',
+    cpCard1: 'This tool is intended for personal use only. Recording copyrighted material such as audiobooks is generally prohibited.',
+    cpExLbl: 'Dutch exception:',
+    cpCardEx: 'The private copy exception (Dutch Copyright Act art. 16b/c) permits one private copy of legally obtained material, for personal use only — not for distribution.',
+    cpCard3: 'Use outside the Netherlands is subject to local legislation. The creator accepts no liability.',
+    cpWarnTitle: '⚠ Copyright notice',
+    cpW1: 'This tool records audio via the microphone input. Copying copyrighted material such as audiobooks is <strong>prohibited</strong> in most countries.',
+    cpW2: '<span class="exception">Dutch exception:</span> In the Netherlands, the <em>private copy exception</em> (Dutch Copyright Act art. 16b/c) permits one copy of legally obtained material, for personal use only. This copy may <strong>not</strong> be distributed or used commercially.',
+    cpW3: 'This tool was designed for personal use by its creator. Use outside the Netherlands is subject to local legislation.',
+    cpBtn: 'I understand and agree',
+    micDenied: 'Microphone denied: ', encSeg: 'encoding…', segReady: ' ready · ', mb: ' MB',
+  }
+};
+
+// ── State ─────────────────────────────────────────────────────
+let currentLang = 'nl';
+let currentMode = 'cable'; // 'cable' | 'ambient'
+
+// Codewoorden die een nieuw segment triggeren
+const KEYWORDS = ['hoofdstuk', 'capitolo', 'chapter'];
+
+// ── Taal ─────────────────────────────────────────────────────
+function pickLang(lang) {
+  currentLang = lang;
+  document.getElementById('lang-screen').style.display = 'none';
+  const l = t[lang];
+  document.getElementById('cp-title').textContent = l.cpWarnTitle;
+  document.getElementById('cp-text1').innerHTML = l.cpW1;
+  document.getElementById('cp-text2').innerHTML = l.cpW2;
+  document.getElementById('cp-text3').textContent = l.cpW3;
+  document.getElementById('cp-btn').textContent = l.cpBtn;
+  document.getElementById('cp-warning').style.display = 'flex';
+}
+
+function acceptWarning() {
+  document.getElementById('cp-warning').style.display = 'none';
+  applyLang(currentLang);
+}
+
+function switchLang(lang) {
+  currentLang = lang;
+  applyLang(lang);
+}
+
+function applyLang(lang) {
+  const l = t[lang];
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.lang-btn[onclick="switchLang('${lang}')"]`).classList.add('active');
+  document.getElementById('h-title').textContent = l.title;
+  document.getElementById('h-sub').textContent = l.sub;
+  document.getElementById('lbl-mode-title').textContent = l.modeTitle;
+  document.getElementById('lbl-mode-cable').textContent = l.modeCable;
+  document.getElementById('lbl-mode-ambient').textContent = l.modeAmbient;
+  document.getElementById('mode-desc').textContent = currentMode === 'cable' ? l.modeDescCable : l.modeDescAmbient;
+  document.getElementById('lbl-keyword').textContent = l.keywordLabel;
+  document.getElementById('keyword-words').textContent = l.keywordWords;
+  document.getElementById('lbl-meter').textContent = l.meterTitle;
+  document.getElementById('lbl-level').textContent = l.level;
+  document.getElementById('lbl-quiet').textContent = l.quiet;
+  document.getElementById('lbl-test').textContent = meterActive ? l.testStop : l.testStart;
+  document.getElementById('btnTest').childNodes[0].textContent = meterActive ? '■ ' : '▶ ';
+  document.getElementById('lbl-seg-title').textContent = l.segTitle;
+  document.getElementById('lbl-autosave').textContent = l.autoSave;
+  document.getElementById('opt-nolimit').textContent = l.noLimit;
+  document.getElementById('lbl-rec-title').textContent = l.recTitle;
+  document.getElementById('lbl-ready').textContent = l.ready;
+  document.getElementById('lbl-rec').textContent = l.rec;
+  document.getElementById('lbl-pause').textContent = isPaused ? l.resume : l.pause;
+  document.getElementById('btnPause').childNodes[0].textContent = isPaused ? '▶ ' : '⏸ ';
+  document.getElementById('lbl-stop').textContent = l.stop;
+  document.getElementById('lbl-downloads').textContent = l.downloads;
+  document.getElementById('status-msg').textContent = isRecording
+    ? (isPaused ? l.statusPaused : (currentMode === 'ambient' ? l.statusRecAmbient : l.statusRec))
+    : l.statusReady;
+  document.getElementById('notice-text').textContent = currentMode === 'ambient' ? l.noticeAmbient : l.noticeCable;
+  document.getElementById('cp-card-title').textContent = l.cpCardTitle;
+  document.getElementById('cp-card-1').textContent = l.cpCard1;
+  document.getElementById('cp-ex-lbl').textContent = l.cpExLbl;
+  document.getElementById('cp-card-ex').textContent = l.cpCardEx;
+  document.getElementById('cp-card-3').textContent = l.cpCard3;
+  if (!meterActive) document.getElementById('vuSignal').textContent = l.vuNone;
+}
+
+function setStatus(msg) {
+  document.getElementById('status-msg').textContent = msg;
+}
+
+// ── Modus ─────────────────────────────────────────────────────
+function setMode(mode) {
+  currentMode = mode;
+  const l = t[currentLang];
+  document.getElementById('mode-btn-cable').classList.toggle('active', mode === 'cable');
+  document.getElementById('mode-btn-ambient').classList.toggle('active', mode === 'ambient');
+  document.getElementById('mode-desc').textContent = mode === 'cable' ? l.modeDescCable : l.modeDescAmbient;
+  document.getElementById('keyword-row').style.display = mode === 'ambient' ? 'flex' : 'none';
+  document.getElementById('notice-text').textContent = mode === 'ambient' ? l.noticeAmbient : l.noticeCable;
+}
+
+// ── Keyword flash ─────────────────────────────────────────────
+function showKeywordFlash(msg) {
+  const el = document.getElementById('keyword-flash');
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 2000);
+}
+
+// ── Spraakherkenning (codewoord) ──────────────────────────────
+let recognition = null;
+let recognitionActive = false;
+
+function startRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return; // stille fallback als niet ondersteund
+  recognition = new SR();
+  recognition.lang = 'nl-NL'; // pakt ook Italiaanse woorden op
+  recognition.continuous = true;
+  recognition.interimResults = false;
+  recognition.onresult = (e) => {
+    const transcript = e.results[e.results.length - 1][0].transcript.toLowerCase().trim();
+    for (const kw of KEYWORDS) {
+      if (transcript.includes(kw)) {
+        showKeywordFlash('🎵 ' + t[currentLang].keywordDetected + ' — "' + kw + '"');
+        document.getElementById('keyword-tag').classList.add('listening');
+        setTimeout(() => document.getElementById('keyword-tag').classList.remove('listening'), 1500);
+        saveSegmentAndContinue();
+        return;
+      }
+    }
+  };
+  recognition.onerror = () => {};
+  recognition.onend = () => { if (recognitionActive) recognition.start(); }; // herstart automatisch
+  recognitionActive = true;
+  recognition.start();
+}
+
+function stopRecognition() {
+  recognitionActive = false;
+  if (recognition) { try { recognition.stop(); } catch(e) {} }
+  document.getElementById('keyword-tag').classList.remove('listening');
+}
+
+// ── VU Meter ─────────────────────────────────────────────────
+let meterStream = null, meterContext = null, meterAnalyser = null;
+let meterActive = false, meterRaf = null;
+
+async function toggleMeter() {
+  if (meterActive) {
+    stopMeter();
+    document.getElementById('lbl-test').textContent = t[currentLang].testStart;
+    document.getElementById('btnTest').childNodes[0].textContent = '▶ ';
+  } else {
+    await startMeter();
+    document.getElementById('lbl-test').textContent = t[currentLang].testStop;
+    document.getElementById('btnTest').childNodes[0].textContent = '■ ';
+  }
+}
+
+async function startMeter(existingStream) {
+  try {
+    meterStream = existingStream || await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+    });
+    meterContext = new (window.AudioContext || window.webkitAudioContext)();
+    const src = meterContext.createMediaStreamSource(meterStream);
+    meterAnalyser = meterContext.createAnalyser();
+    meterAnalyser.fftSize = 1024;
+    meterAnalyser.smoothingTimeConstant = 0.6;
+    src.connect(meterAnalyser);
+    meterActive = true;
+    drawMeter();
+  } catch(e) {
+    document.getElementById('vuSignal').textContent = t[currentLang].vuDenied + e.message;
+  }
+}
+
+function stopMeter() {
+  meterActive = false;
+  if (meterRaf) cancelAnimationFrame(meterRaf);
+  if (meterContext) meterContext.close();
+  if (meterStream && !isRecording) meterStream.getTracks().forEach(t => t.stop());
+  document.getElementById('vuBar').style.width = '0%';
+  document.getElementById('vuDb').textContent = '— dB';
+  document.getElementById('vuSignal').textContent = t[currentLang].vuStopped;
+  document.getElementById('vuSignal').className = 'vu-signal';
+}
+
+function drawMeter() {
+  if (!meterActive) return;
+  const l = t[currentLang];
+  const buf = new Float32Array(meterAnalyser.fftSize);
+  meterAnalyser.getFloatTimeDomainData(buf);
+  let peak = 0;
+  for (let i = 0; i < buf.length; i++) { const a = Math.abs(buf[i]); if (a > peak) peak = a; }
+  const db = peak > 0 ? 20 * Math.log10(peak) : -80;
+  const pct = ((Math.max(-48, Math.min(0, db)) + 48) / 48) * 100;
+  document.getElementById('vuBar').style.width = pct + '%';
+  document.getElementById('vuDb').textContent = (db > -80 ? db.toFixed(1) : '–∞') + ' dB';
+  const sig = document.getElementById('vuSignal');
+  if      (db < -40) { sig.textContent = l.vuNoSignal; sig.className = 'vu-signal'; }
+  else if (db < -18) { sig.textContent = l.vuWeak;     sig.className = 'vu-signal'; }
+  else if (db < -6)  { sig.textContent = l.vuGood;     sig.className = 'vu-signal good'; }
+  else if (db < -2)  { sig.textContent = l.vuHigh;     sig.className = 'vu-signal loud'; }
+  else               { sig.textContent = l.vuLoud;     sig.className = 'vu-signal loud'; }
+  meterRaf = requestAnimationFrame(drawMeter);
+}
+
+// ── Recorder ─────────────────────────────────────────────────
+let allPcmLeft = [], audioContext = null, sourceNode = null;
+let processorNode = null, stream = null;
+let isRecording = false, isPaused = false;
+let segmentNumber = 1, totalSeconds = 0, segmentSeconds = 0, timerInterval = null;
+
+function updateTimer() {
+  if (isPaused) return;
+  totalSeconds++; segmentSeconds++;
+  document.getElementById('timerDisplay').textContent = formatTime(totalSeconds);
+  const limit = parseInt(document.getElementById('segmentLength').value);
+  if (limit > 0) {
+    document.getElementById('progressBar').style.width =
+      Math.min((segmentSeconds / (limit * 60)) * 100, 100) + '%';
+    if (segmentSeconds >= limit * 60) saveSegmentAndContinue();
+  }
+}
+
+function formatTime(s) {
+  return [Math.floor(s/3600), Math.floor((s%3600)/60), s%60]
+    .map(n => String(n).padStart(2,'0')).join(':');
+}
+
+async function startRecording() {
+  const l = t[currentLang];
+  if (meterActive) stopMeter();
+
+  // In omgevingsmodus: echocancelling UIT maar autoGain ook UIT voor zuivere opname
+  const audioConstraints = currentMode === 'ambient'
+    ? { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+    : { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1, sampleRate: 44100 };
+
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+  } catch(e) { setStatus(l.micDenied + e.message); return; }
+
+  meterStream = stream;
+  await startMeter(stream);
+  document.getElementById('lbl-test').textContent = l.testStop;
+  document.getElementById('btnTest').childNodes[0].textContent = '■ ';
+
+  audioContext = meterContext;
+  sourceNode = audioContext.createMediaStreamSource(stream);
+  processorNode = audioContext.createScriptProcessor(4096, 1, 1);
+  allPcmLeft = [];
+
+  processorNode.onaudioprocess = function(e) {
+    if (isPaused) return;
+    const input = e.inputBuffer.getChannelData(0);
+    const copy = new Float32Array(input.length); copy.set(input);
+    allPcmLeft.push(copy);
+  };
+
+  sourceNode.connect(processorNode);
+  processorNode.connect(audioContext.destination);
+  sourceNode.connect(meterAnalyser);
+
+  isRecording = true; isPaused = false;
+  totalSeconds = 0; segmentSeconds = 0; segmentNumber = 1;
+
+  document.getElementById('recDot').classList.add('active');
+  document.getElementById('timerDisplay').classList.add('recording');
+  document.getElementById('btnRecord').disabled = true;
+  document.getElementById('btnPause').disabled = false;
+  document.getElementById('btnStop').disabled = false;
+  document.getElementById('mode-btn-cable').disabled = true;
+  document.getElementById('mode-btn-ambient').disabled = true;
+  document.getElementById('segmentInfo').innerHTML = l.segLabel + ' 1<br>' + l.segBusy;
+  document.getElementById('progressBar').style.width = '0%';
+  timerInterval = setInterval(updateTimer, 1000);
+  setStatus(currentMode === 'ambient' ? l.statusRecAmbient : l.statusRec);
+
+  // Start spraakherkenning in omgevingsmodus
+  if (currentMode === 'ambient') startRecognition();
+}
+
+function togglePause() {
+  const l = t[currentLang];
+  if (!isRecording) return;
+  isPaused = !isPaused;
+  if (isPaused) {
+    audioContext.suspend();
+    if (recognition) recognition.stop();
+    document.getElementById('lbl-pause').textContent = l.resume;
+    document.getElementById('btnPause').childNodes[0].textContent = '▶ ';
+    document.getElementById('recDot').classList.remove('active');
+    setStatus(l.statusPaused);
+  } else {
+    audioContext.resume();
+    if (currentMode === 'ambient') startRecognition();
+    document.getElementById('lbl-pause').textContent = l.pause;
+    document.getElementById('btnPause').childNodes[0].textContent = '⏸ ';
+    document.getElementById('recDot').classList.add('active');
+    setStatus(currentMode === 'ambient' ? l.statusRecAmbient : l.statusRec);
+  }
+}
+
+function saveSegmentAndContinue() {
+  const l = t[currentLang];
+  const pcmData = allPcmLeft; allPcmLeft = [];
+  segmentSeconds = 0;
+  document.getElementById('progressBar').style.width = '0%';
+  const num = segmentNumber++;
+  document.getElementById('segmentInfo').innerHTML = l.segLabel + ' ' + segmentNumber + '<br>' + l.segBusy;
+  encodeMp3(pcmData, num);
+}
+
+function stopRecording() {
+  const l = t[currentLang];
+  if (!isRecording) return;
+  clearInterval(timerInterval);
+  stopRecognition();
+  const pcmData = allPcmLeft; allPcmLeft = [];
+  processorNode.disconnect(); sourceNode.disconnect();
+  stream.getTracks().forEach(tr => tr.stop());
+  stopMeter();
+  if (audioContext) audioContext.close();
+  audioContext = null;
+  isRecording = false; isPaused = false;
+  document.getElementById('recDot').classList.remove('active');
+  document.getElementById('timerDisplay').classList.remove('recording');
+  document.getElementById('btnRecord').disabled = false;
+  document.getElementById('btnPause').disabled = true;
+  document.getElementById('btnStop').disabled = true;
+  document.getElementById('mode-btn-cable').disabled = false;
+  document.getElementById('mode-btn-ambient').disabled = false;
+  document.getElementById('lbl-pause').textContent = l.pause;
+  document.getElementById('btnPause').childNodes[0].textContent = '⏸ ';
+  document.getElementById('lbl-test').textContent = l.testStart;
+  document.getElementById('btnTest').childNodes[0].textContent = '▶ ';
+  document.getElementById('segmentInfo').innerHTML = l.segDone + '<br>' + segmentNumber + ' ' + l.parts;
+  setStatus(l.statusEncoding);
+  if (pcmData.length > 0) encodeMp3(pcmData, segmentNumber);
+  else setStatus(l.statusDone);
+}
+
+function encodeMp3(pcmChunks, num) {
+  const l = t[currentLang];
+  setStatus(l.segLabel + ' ' + num + ' ' + l.encSeg);
+  setTimeout(() => {
+    try {
+      let totalLen = 0;
+      for (const c of pcmChunks) totalLen += c.length;
+      const flat = new Float32Array(totalLen);
+      let offset = 0;
+      for (const c of pcmChunks) { flat.set(c, offset); offset += c.length; }
+      const int16 = new Int16Array(flat.length);
+      for (let i = 0; i < flat.length; i++) {
+        const s = Math.max(-1, Math.min(1, flat[i]));
+        int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      }
+      const mp3enc = new lamejs.Mp3Encoder(1, 44100, 64);
+      const mp3Data = [];
+      for (let i = 0; i < int16.length; i += 1152) {
+        const enc = mp3enc.encodeBuffer(int16.subarray(i, i + 1152));
+        if (enc.length > 0) mp3Data.push(new Int8Array(enc));
+      }
+      const flushed = mp3enc.flush();
+      if (flushed.length > 0) mp3Data.push(new Int8Array(flushed));
+      const blob = new Blob(mp3Data, { type: 'audio/mp3' });
+      const now = new Date();
+      const ts = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+      const filename = `audioboek_${ts}_deel${String(num).padStart(2,'0')}.mp3`;
+      addDownload(filename, blob, num);
+      setStatus(l.segLabel + ' ' + num + l.segReady + (blob.size/1048576).toFixed(1) + l.mb);
+    } catch(e) { setStatus('Fout/Errore/Error: ' + e.message); }
+  }, 50);
+}
+
+function addDownload(filename, blob, num) {
+  const l = t[currentLang];
+  const url = URL.createObjectURL(blob);
+  document.getElementById('downloads-card').style.display = 'block';
+  const item = document.createElement('div');
+  item.className = 'download-item';
+  item.innerHTML = `
+    <div>
+      <div style="font-weight:600">${l.segLabel} ${String(num).padStart(2,'0')}</div>
+      <span>${filename} · ${(blob.size/1048576).toFixed(1)} MB</span>
+    </div>
+    <a href="${url}" download="${filename}">
+      <button class="btn-download">${l.download}</button>
+    </a>`;
+  document.getElementById('downloads-list').appendChild(item);
+}
+</script>
+</body>
+</html>
