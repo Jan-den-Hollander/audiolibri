@@ -118,36 +118,6 @@
     color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 10px;
   }
 
-  /* ── Opslag card ── */
-  .folder-row {
-    display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
-  }
-  .folder-row label { font-size: 0.82rem; color: var(--ink); min-width: 70px; }
-  .folder-row input[type=text] {
-    flex: 1; font-family: 'Source Sans 3', sans-serif; font-size: 0.88rem;
-    padding: 7px 10px; border: 1px solid var(--aged); border-radius: 3px;
-    background: var(--parchment); color: var(--ink);
-  }
-  .folder-row input[type=text]:focus { outline: 1px solid var(--gold); }
-  .btn-folder {
-    white-space: nowrap; padding: 8px 12px; background: var(--parchment);
-    border: 1.5px solid var(--gold); border-radius: 3px; font-size: 0.82rem;
-    font-weight: 600; color: var(--ink); cursor: pointer; letter-spacing: 0.04em;
-    -webkit-tap-highlight-color: transparent; display: flex; align-items: center; gap: 5px;
-  }
-  .btn-folder:active { transform: scale(0.97); }
-  .folder-status {
-    font-size: 0.75rem; margin-top: 4px; min-height: 14px; font-style: italic;
-    display: flex; align-items: center; gap: 6px;
-  }
-  .folder-status.ok  { color: var(--green); }
-  .folder-status.warn { color: var(--rust); }
-  .folder-status.info { color: var(--muted); }
-  .fs-api-note {
-    font-size: 0.72rem; color: var(--muted); line-height: 1.45;
-    margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--aged);
-  }
-
   /* Modus toggle */
   .mode-row { display: flex; gap: 8px; margin-bottom: 4px; }
   .mode-btn {
@@ -254,11 +224,6 @@
     -webkit-tap-highlight-color: transparent; white-space: nowrap;
   }
   .btn-download:active { transform: scale(0.97); }
-  .saved-badge {
-    display: inline-block; background: var(--green); color: white;
-    font-size: 0.72rem; font-weight: 600; border-radius: 3px;
-    padding: 3px 8px; letter-spacing: 0.05em; white-space: nowrap;
-  }
 
   /* Copyright card */
   .copyright-card {
@@ -277,6 +242,7 @@
 </head>
 <body>
 
+<!-- Codewoord flash -->
 <div id="keyword-flash"></div>
 
 <!-- STAP 1: Taalkeuze -->
@@ -293,11 +259,6 @@
         <span class="flag">🇮🇹</span>
         <span class="lang-name">Italiano</span>
         <span class="lang-sub">IT</span>
-      </button>
-      <button class="lang-pick-btn" onclick="pickLang('en')">
-        <span class="flag">🇬🇧</span>
-        <span class="lang-name">English</span>
-        <span class="lang-sub">EN</span>
       </button>
     </div>
   </div>
@@ -323,38 +284,8 @@
   <div class="lang-toggle">
     <button class="lang-btn" onclick="switchLang('nl')">NL</button>
     <button class="lang-btn" onclick="switchLang('it')">IT</button>
-    <button class="lang-btn" onclick="switchLang('en')">EN</button>
   </div>
 </header>
-
-<!-- ── OPSLAG CARD ── -->
-<div class="card" id="storage-card">
-  <div class="card-title" id="lbl-storage-title">Opslag</div>
-
-  <!-- Boeknaam -->
-  <div class="folder-row">
-    <label id="lbl-bookname">Boektitel:</label>
-    <input type="text" id="bookName" placeholder="bijv. rocco_s06" maxlength="60"
-           oninput="updateFilenamePreview()">
-  </div>
-
-  <!-- Mapkeuze (File System Access API) -->
-  <div id="fsa-row" style="display:none">
-    <div class="folder-row">
-      <label id="lbl-folder">Opslagmap:</label>
-      <button class="btn-folder" id="btnPickFolder" onclick="pickFolder()">
-        📁 <span id="lbl-pick-folder">Map kiezen</span>
-      </button>
-    </div>
-    <div class="folder-status info" id="folderStatus"></div>
-  </div>
-
-  <!-- Preview bestandsnaam -->
-  <div class="folder-status info" id="filenamePreview" style="margin-top:6px"></div>
-
-  <!-- Uitleg als FSA niet beschikbaar -->
-  <div class="fs-api-note" id="fsa-fallback-note"></div>
-</div>
 
 <!-- Opname modus -->
 <div class="card">
@@ -367,7 +298,9 @@
       🎙 <span id="lbl-mode-ambient">Omgeving</span>
     </button>
   </div>
-  <div class="mode-desc" id="mode-desc"></div>
+  <div class="mode-desc" id="mode-desc">Verbind de twee telefoons met een audiokabel. Beste kwaliteit.</div>
+
+  <!-- Codewoord (alleen zichtbaar in omgeving-modus) -->
   <div class="keyword-row" id="keyword-row" style="display:none">
     <label id="lbl-keyword"></label>
     <div class="keyword-tag" id="keyword-tag">
@@ -426,10 +359,10 @@
     <button class="btn btn-pause" id="btnPause" onclick="togglePause()" disabled>⏸ <span id="lbl-pause">Pauze</span></button>
     <button class="btn btn-stop" id="btnStop" onclick="stopRecording()" disabled>■ <span id="lbl-stop">Stop</span></button>
   </div>
-  <div id="status-msg"></div>
+  <div id="status-msg">Druk op Opnemen om te beginnen</div>
 </div>
 
-<!-- Downloads / Opgeslagen -->
+<!-- Downloads -->
 <div class="card" id="downloads-card">
   <div class="card-title" id="lbl-downloads">Opgeslagen segmenten</div>
   <div id="downloads-list"></div>
@@ -468,24 +401,10 @@ window.addEventListener('load', () => {
   }
 });
 
-// ── File System Access API detectie ──────────────────────────
-const FSA_SUPPORTED = ('showDirectoryPicker' in window);
-let directoryHandle = null; // de gekozen map-handle
-
 // ── Vertalingen ───────────────────────────────────────────────
 const t = {
   nl: {
     title: 'Audioboek Recorder', sub: 'Microfooningang · MP3 · Automatisch segmenteren',
-    storageTitle: 'Opslag',
-    bookname: 'Boektitel:', booknameHint: 'bijv. rocco_s06',
-    folderLabel: 'Opslagmap:',
-    pickFolder: 'Map kiezen',
-    folderNone: 'Nog geen map gekozen — bestanden gaan naar Downloads',
-    folderSet: '✓ Map geselecteerd: ',
-    folderDenied: 'Mapkeuze geannuleerd',
-    fsaFallback: 'Tip: gebruik Chrome/Edge voor directe opslag in een zelfgekozen map. In andere browsers worden bestanden naar Downloads gestuurd.',
-    fsaNote: 'Map wordt alleen voor deze sessie onthouden. Bij heropenen opnieuw kiezen.',
-    filenamePreview: 'Bestandsnaam: ',
     modeTitle: 'Opnamemodus', modeCable: 'Kabel', modeAmbient: 'Omgeving',
     modeDescCable: 'Verbind de twee telefoons met een audiokabel. Beste kwaliteit.',
     modeDescAmbient: 'Legt het omgevingsgeluid op via de ingebouwde microfoon. Leg de telefoon naast de speaker. Gebruik \'s nachts in een stille ruimte.',
@@ -500,7 +419,7 @@ const t = {
     statusRec: 'Opname loopt…', statusRecAmbient: 'Omgevingsopname loopt… 🎙',
     statusPaused: 'Gepauzeerd', statusEncoding: 'Coderen naar MP3…', statusDone: 'Klaar.',
     segBusy: 'Bezig…', segDone: 'Klaar', segLabel: 'Segment', parts: 'segment(en)',
-    download: '↓ Download', savedToFolder: '✓ Opgeslagen',
+    download: '↓ Download',
     noticeAmbient: 'Leg de telefoon op ± 30–50 cm van de speaker. Stille ruimte = betere kwaliteit. Zeg "hoofdstuk" of "capitolo" om automatisch een nieuw segment te starten.',
     noticeCable: 'Verbind de audio-uitgang van de afspeel-telefoon via een kabel met de microfooningang van dit toestel. Test eerst het signaal — groen = goed, oranje = hoog, rood = te luid.',
     vuNone: '— microfoon nog niet actief —', vuStopped: '— meter gestopt —',
@@ -522,16 +441,6 @@ const t = {
   },
   it: {
     title: 'Registratore Audiolibri', sub: 'Ingresso microfono · MP3 · Segmentazione automatica',
-    storageTitle: 'Archiviazione',
-    bookname: 'Titolo libro:', booknameHint: 'es. rocco_s06',
-    folderLabel: 'Cartella:',
-    pickFolder: 'Scegli cartella',
-    folderNone: 'Nessuna cartella — i file vanno in Download',
-    folderSet: '✓ Cartella selezionata: ',
-    folderDenied: 'Selezione annullata',
-    fsaFallback: 'Suggerimento: usa Chrome/Edge per salvare direttamente in una cartella a scelta. Con altri browser i file vanno in Download.',
-    fsaNote: 'La cartella viene ricordata solo per questa sessione. Alla riapertura selezionarla di nuovo.',
-    filenamePreview: 'Nome file: ',
     modeTitle: 'Modalità di registrazione', modeCable: 'Cavo', modeAmbient: 'Ambiente',
     modeDescCable: 'Collega i due telefoni con un cavo audio. Qualità migliore.',
     modeDescAmbient: 'Registra il suono ambientale tramite il microfono integrato. Posiziona il telefono vicino all\'altoparlante. Ideale di notte in un ambiente silenzioso.',
@@ -546,7 +455,7 @@ const t = {
     statusRec: 'Registrazione in corso…', statusRecAmbient: 'Registrazione ambiente in corso… 🎙',
     statusPaused: 'In pausa', statusEncoding: 'Codifica in MP3…', statusDone: 'Fatto.',
     segBusy: 'In corso…', segDone: 'Fatto', segLabel: 'Segmento', parts: 'segmento/i',
-    download: '↓ Scarica', savedToFolder: '✓ Salvato',
+    download: '↓ Scarica',
     noticeAmbient: 'Posiziona il telefono a ± 30–50 cm dall\'altoparlante. Ambiente silenzioso = qualità migliore. Di\' "capitolo" o "hoofdstuk" per avviare automaticamente un nuovo segmento.',
     noticeCable: 'Collega l\'uscita audio del telefono di riproduzione all\'ingresso microfono tramite un cavo. Testa prima il segnale — verde = buono, arancione = alto, rosso = troppo forte.',
     vuNone: '— microfono non ancora attivo —', vuStopped: '— misuratore fermato —',
@@ -566,101 +475,14 @@ const t = {
     cpBtn: 'Ho capito e accetto',
     micDenied: 'Microfono negato: ', encSeg: 'codifica…', segReady: ' pronto · ', mb: ' MB',
   },
-  en: {
-    title: 'Audiobook Recorder', sub: 'Microphone input · MP3 · Auto-segmentation',
-    storageTitle: 'Storage',
-    bookname: 'Book title:', booknameHint: 'e.g. rocco_s06',
-    folderLabel: 'Save folder:',
-    pickFolder: 'Choose folder',
-    folderNone: 'No folder chosen — files go to Downloads',
-    folderSet: '✓ Folder selected: ',
-    folderDenied: 'Folder selection cancelled',
-    fsaFallback: 'Tip: use Chrome/Edge to save directly to a folder of your choice. Other browsers send files to Downloads.',
-    fsaNote: 'Folder is remembered for this session only. Re-select when you reopen.',
-    filenamePreview: 'Filename: ',
-    modeTitle: 'Recording mode', modeCable: 'Cable', modeAmbient: 'Ambient',
-    modeDescCable: 'Connect the two phones with an audio cable. Best quality.',
-    modeDescAmbient: 'Records ambient sound via the built-in microphone. Place the phone next to the speaker. Best used at night in a quiet room.',
-    keywordLabel: 'Keyword for new segment:',
-    keywordWords: 'chapter · capitolo',
-    meterTitle: 'Signal Meter', level: 'Input level', quiet: 'silent',
-    testStart: 'Test signal', testStop: 'Stop meter',
-    segTitle: 'Segment length', autoSave: 'Auto-save after:', noLimit: 'No limit',
-    recTitle: 'Recording', ready: 'Ready', rec: 'Record', pause: 'Pause',
-    resume: 'Resume', stop: 'Stop', downloads: 'Saved segments',
-    statusReady: 'Press Record to start',
-    statusRec: 'Recording…', statusRecAmbient: 'Ambient recording… 🎙',
-    statusPaused: 'Paused', statusEncoding: 'Encoding to MP3…', statusDone: 'Done.',
-    segBusy: 'In progress…', segDone: 'Done', segLabel: 'Segment', parts: 'segment(s)',
-    download: '↓ Download', savedToFolder: '✓ Saved',
-    noticeAmbient: 'Place the phone ± 30–50 cm from the speaker. Quiet room = better quality. Say "chapter" or "capitolo" to automatically start a new segment.',
-    noticeCable: 'Connect the audio output of the playback phone via cable to the microphone input of this device. Test the signal — green = good, orange = high, red = too loud.',
-    vuNone: '— microphone not yet active —', vuStopped: '— meter stopped —',
-    vuDenied: 'Microphone denied: ', vuNoSignal: 'No signal — cable connected?',
-    vuWeak: 'Signal too weak — increase volume', vuGood: '✓ Good signal — ready to record',
-    vuHigh: '⚠ Signal high — reduce volume slightly', vuLoud: '✗ Too loud — reduce volume!',
-    keywordDetected: 'New segment started',
-    cpCardTitle: '© Copyright & use',
-    cpCard1: 'This tool is intended for personal use only. Recording copyrighted material such as audiobooks is generally prohibited.',
-    cpExLbl: 'Dutch exception:',
-    cpCardEx: 'The private copy exception (Dutch Copyright Act art. 16b/c) permits one private copy of legally obtained material, for personal use only — not for distribution.',
-    cpCard3: 'Use outside the Netherlands is subject to local legislation. The creator accepts no liability.',
-    cpWarnTitle: '⚠ Copyright notice',
-    cpW1: 'This tool records audio via the microphone input. Copying copyrighted material such as audiobooks is <strong>prohibited</strong> in most countries.',
-    cpW2: '<span class="exception">Dutch exception:</span> In the Netherlands, the <em>private copy exception</em> (Dutch Copyright Act art. 16b/c) permits one copy of legally obtained material, for personal use only. This copy may <strong>not</strong> be distributed or used commercially.',
-    cpW3: 'This tool was designed for personal use by its creator. Use outside the Netherlands is subject to local legislation.',
-    cpBtn: 'I understand and agree',
-    micDenied: 'Microphone denied: ', encSeg: 'encoding…', segReady: ' ready · ', mb: ' MB',
-  }
 };
 
 // ── State ─────────────────────────────────────────────────────
 let currentLang = 'nl';
-let currentMode = 'cable';
+let currentMode = 'cable'; // 'cable' | 'ambient'
+
+// Codewoorden die een nieuw segment triggeren
 const KEYWORDS = ['hoofdstuk', 'capitolo', 'chapter'];
-
-// ── File System Access API ────────────────────────────────────
-async function pickFolder() {
-  const l = t[currentLang];
-  if (!FSA_SUPPORTED) return;
-  try {
-    directoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-    document.getElementById('folderStatus').textContent = l.folderSet + directoryHandle.name;
-    document.getElementById('folderStatus').className = 'folder-status ok';
-    updateFilenamePreview();
-  } catch(e) {
-    if (e.name !== 'AbortError') {
-      document.getElementById('folderStatus').textContent = l.folderDenied;
-      document.getElementById('folderStatus').className = 'folder-status warn';
-    }
-  }
-}
-
-async function saveToFolder(filename, blob) {
-  if (!directoryHandle) return false;
-  try {
-    const fh = await directoryHandle.getFileHandle(filename, { create: true });
-    const writable = await fh.createWritable();
-    await writable.write(blob);
-    await writable.close();
-    return true;
-  } catch(e) {
-    console.warn('FSA save failed:', e);
-    return false;
-  }
-}
-
-function getBookSlug() {
-  const raw = document.getElementById('bookName').value.trim();
-  return raw ? raw.replace(/[^a-zA-Z0-9_\-]/g, '_').toLowerCase() : 'audioboek';
-}
-
-function updateFilenamePreview() {
-  const l = t[currentLang];
-  const slug = getBookSlug();
-  const ex = `${slug}_deel01.mp3`;
-  document.getElementById('filenamePreview').textContent = l.filenamePreview + ex;
-}
 
 // ── Taal ─────────────────────────────────────────────────────
 function pickLang(lang) {
@@ -691,30 +513,6 @@ function applyLang(lang) {
   document.querySelector(`.lang-btn[onclick="switchLang('${lang}')"]`).classList.add('active');
   document.getElementById('h-title').textContent = l.title;
   document.getElementById('h-sub').textContent = l.sub;
-
-  // Opslag card
-  document.getElementById('lbl-storage-title').textContent = l.storageTitle;
-  document.getElementById('lbl-bookname').textContent = l.bookname;
-  document.getElementById('bookName').placeholder = l.booknameHint;
-  if (FSA_SUPPORTED) {
-    document.getElementById('fsa-row').style.display = 'block';
-    document.getElementById('lbl-folder').textContent = l.folderLabel;
-    document.getElementById('lbl-pick-folder').textContent = l.pickFolder;
-    const fs = document.getElementById('folderStatus');
-    if (!directoryHandle) {
-      fs.textContent = l.folderNone;
-      fs.className = 'folder-status info';
-    } else {
-      fs.textContent = l.folderSet + directoryHandle.name;
-      fs.className = 'folder-status ok';
-    }
-    document.getElementById('fsa-fallback-note').textContent = l.fsaNote;
-  } else {
-    document.getElementById('fsa-row').style.display = 'none';
-    document.getElementById('fsa-fallback-note').textContent = l.fsaFallback;
-  }
-  updateFilenamePreview();
-
   document.getElementById('lbl-mode-title').textContent = l.modeTitle;
   document.getElementById('lbl-mode-cable').textContent = l.modeCable;
   document.getElementById('lbl-mode-ambient').textContent = l.modeAmbient;
@@ -771,14 +569,15 @@ function showKeywordFlash(msg) {
   setTimeout(() => { el.style.display = 'none'; }, 2000);
 }
 
-// ── Spraakherkenning ──────────────────────────────────────────
-let recognition = null, recognitionActive = false;
+// ── Spraakherkenning (codewoord) ──────────────────────────────
+let recognition = null;
+let recognitionActive = false;
 
 function startRecognition() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) return;
+  if (!SR) return; // stille fallback als niet ondersteund
   recognition = new SR();
-  recognition.lang = 'nl-NL';
+  recognition.lang = 'nl-NL'; // pakt ook Italiaanse woorden op
   recognition.continuous = true;
   recognition.interimResults = false;
   recognition.onresult = (e) => {
@@ -794,7 +593,7 @@ function startRecognition() {
     }
   };
   recognition.onerror = () => {};
-  recognition.onend = () => { if (recognitionActive) recognition.start(); };
+  recognition.onend = () => { if (recognitionActive) recognition.start(); }; // herstart automatisch
   recognitionActive = true;
   recognition.start();
 }
@@ -896,7 +695,12 @@ function formatTime(s) {
 async function startRecording() {
   const l = t[currentLang];
   if (meterActive) stopMeter();
-  const audioConstraints = { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1, sampleRate: 44100 };
+
+  // In omgevingsmodus: echocancelling UIT maar autoGain ook UIT voor zuivere opname
+  const audioConstraints = currentMode === 'ambient'
+    ? { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+    : { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1, sampleRate: 44100 };
+
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
   } catch(e) { setStatus(l.micDenied + e.message); return; }
@@ -932,12 +736,12 @@ async function startRecording() {
   document.getElementById('btnStop').disabled = false;
   document.getElementById('mode-btn-cable').disabled = true;
   document.getElementById('mode-btn-ambient').disabled = true;
-  document.getElementById('bookName').disabled = true;
-  if (FSA_SUPPORTED) document.getElementById('btnPickFolder').disabled = true;
   document.getElementById('segmentInfo').innerHTML = l.segLabel + ' 1<br>' + l.segBusy;
   document.getElementById('progressBar').style.width = '0%';
   timerInterval = setInterval(updateTimer, 1000);
   setStatus(currentMode === 'ambient' ? l.statusRecAmbient : l.statusRec);
+
+  // Start spraakherkenning in omgevingsmodus
   if (currentMode === 'ambient') startRecognition();
 }
 
@@ -991,8 +795,6 @@ function stopRecording() {
   document.getElementById('btnStop').disabled = true;
   document.getElementById('mode-btn-cable').disabled = false;
   document.getElementById('mode-btn-ambient').disabled = false;
-  document.getElementById('bookName').disabled = false;
-  if (FSA_SUPPORTED) document.getElementById('btnPickFolder').disabled = false;
   document.getElementById('lbl-pause').textContent = l.pause;
   document.getElementById('btnPause').childNodes[0].textContent = '⏸ ';
   document.getElementById('lbl-test').textContent = l.testStart;
@@ -1003,15 +805,10 @@ function stopRecording() {
   else setStatus(l.statusDone);
 }
 
-function buildFilename(num) {
-  const slug = getBookSlug();
-  return `${slug}_deel${String(num).padStart(2,'0')}.mp3`;
-}
-
 function encodeMp3(pcmChunks, num) {
   const l = t[currentLang];
   setStatus(l.segLabel + ' ' + num + ' ' + l.encSeg);
-  setTimeout(async () => {
+  setTimeout(() => {
     try {
       let totalLen = 0;
       for (const c of pcmChunks) totalLen += c.length;
@@ -1032,37 +829,29 @@ function encodeMp3(pcmChunks, num) {
       const flushed = mp3enc.flush();
       if (flushed.length > 0) mp3Data.push(new Int8Array(flushed));
       const blob = new Blob(mp3Data, { type: 'audio/mp3' });
-      const filename = buildFilename(num);
-
-      // Probeer eerst naar gekozen map te schrijven
-      let savedToDir = false;
-      if (directoryHandle) {
-        savedToDir = await saveToFolder(filename, blob);
-      }
-
-      addDownload(filename, blob, num, savedToDir);
+      const now = new Date();
+      const ts = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+      const filename = `audioboek_${ts}_deel${String(num).padStart(2,'0')}.mp3`;
+      addDownload(filename, blob, num);
       setStatus(l.segLabel + ' ' + num + l.segReady + (blob.size/1048576).toFixed(1) + l.mb);
     } catch(e) { setStatus('Fout/Errore/Error: ' + e.message); }
   }, 50);
 }
 
-function addDownload(filename, blob, num, savedToDir) {
+function addDownload(filename, blob, num) {
   const l = t[currentLang];
   const url = URL.createObjectURL(blob);
   document.getElementById('downloads-card').style.display = 'block';
   const item = document.createElement('div');
   item.className = 'download-item';
-
-  const actionHtml = savedToDir
-    ? `<span class="saved-badge">${l.savedToFolder}</span>`
-    : `<a href="${url}" download="${filename}"><button class="btn-download">${l.download}</button></a>`;
-
   item.innerHTML = `
     <div>
       <div style="font-weight:600">${l.segLabel} ${String(num).padStart(2,'0')}</div>
-      <span>${filename} · ${(blob.size/1048576).toFixed(1)} MB${savedToDir ? ' · 📁 ' + (directoryHandle ? directoryHandle.name : '') : ''}</span>
+      <span>${filename} · ${(blob.size/1048576).toFixed(1)} MB</span>
     </div>
-    ${actionHtml}`;
+    <a href="${url}" download="${filename}">
+      <button class="btn-download">${l.download}</button>
+    </a>`;
   document.getElementById('downloads-list').appendChild(item);
 }
 </script>
