@@ -991,12 +991,14 @@ function addDownload(filename, blob, num, savedToDir) {
   overflow-y: auto; /* Voegt scrollbaarheid toe aan de modal zelf */
   padding: 20px; /* Zorgt voor ruimte rondom de modal */
 ">
-  <div style="
-    background:#1a1a2e; color:#e0e0e0;
-    border:1px solid #444; border-radius:10px;
-    max-width:480px; width:90%; padding:24px;
-    font-family:sans-serif; font-size:13px; line-height:1.6;
-  ">
+<div style="
+  background:#1a1a2e; color:#e0e0e0;
+  border:1px solid #444; border-radius:10px;
+  max-width:480px; width:90%; max-height:80vh; /* Beperkt de hoogte tot 80% van het scherm */
+  padding:24px;
+  font-family:sans-serif; font-size:13px; line-height:1.6;
+  overflow-y: auto; /* Zorgt voor scrollen als de inhoud te lang is */
+">
     <h3 style="color:#7eb8f7; margin-top:0">
       © Jan den Hollander &nbsp;·&nbsp;
       <span id="jdh-modal-title" style="font-weight:normal;font-size:12px"></span>
